@@ -3532,6 +3532,8 @@ static void FS_CheckPak0( void )
 	qboolean installHome = qfalse;
 	char *installPath;
 
+	return;
+
 	for( path = fs_searchpaths; path; path = path->next )
 	{
 		if(!path->pack)
