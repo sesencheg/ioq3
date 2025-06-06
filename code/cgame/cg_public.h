@@ -21,6 +21,40 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 */
 //
 
+#define MAX_DEMO_OBITS (1024 * 2)
+#define MAX_ITEM_PICKUPS (1024 * 4)
+#define MAX_TIMEOUTS (256)
+#define MAX_DEMO_ROUND_STARTS 256
+
+typedef struct {
+	int startTime;
+	int endTime;
+	int serverTime;  // time the timeout or timein command is issued, since it takes two config string changes in quake live for the start and end time this is used incase order doesn't matter
+	//int cpmaLevelTime;
+	//int cpmaTd;
+	//int cpmaTimein;
+} timeOut_t;
+
+typedef struct {
+	int firstServerTime;
+	int firstMessageNum;
+	int lastServerTime;
+	int lastMessageNum;
+	int number;
+	int killer;
+	int victim;
+	int mod;
+} demoObit_t;
+
+typedef struct {
+	int clientNum;
+	int index;
+	vec3_t origin;
+	int pickupTime;
+	int specPickupTime;
+	int number;  // entity number
+	qboolean spec;
+} itemPickup_t;
 
 #define	CMD_BACKUP			64	
 #define	CMD_MASK			(CMD_BACKUP - 1)

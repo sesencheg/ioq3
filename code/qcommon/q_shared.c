@@ -750,6 +750,15 @@ int Q_isalpha( int c )
 	return ( 0 );
 }
 
+qboolean Q_isdigit (char c)
+{
+	if (c < '0'  ||  c > '9') {
+		return qfalse;
+	}
+
+	return qtrue;
+}
+
 qboolean Q_isanumber( const char *s )
 {
 	char *p;
@@ -761,6 +770,26 @@ qboolean Q_isanumber( const char *s )
 	d = strtod( s, &p );
 
 	return *p == '\0';
+}
+
+
+qboolean Q_isAnInteger (const char *s)
+{
+	if (!s  ||  !*s) {
+		return qfalse;
+	}
+
+	while (1) {
+		if (!*s) {
+			break;
+		}
+		if (s[0] < '0'  ||  s[0] > '9') {
+			return qfalse;
+		}
+		s++;
+	}
+
+	return qtrue;
 }
 
 qboolean Q_isintegral( float f )
@@ -1008,6 +1037,67 @@ int Q_CountChar(const char *string, char tocount)
 	}
 	
 	return count;
+}
+
+double Q_ParseClockTime (const char *timeString)
+{
+	int slen;
+	int colonCount;
+	int i;
+	double clockTime;
+	char buf[MAX_STRING_CHARS];
+	int minutes;
+	int seconds;
+	int hours;
+	int j;
+
+	slen = strlen(timeString);
+	colonCount = 0;
+	for (i = 0;  i < slen;  i++) {
+		if (timeString[i] == ':') {
+			colonCount++;
+		}
+	}
+
+	if (colonCount == 1) {
+		// minutes and seconds
+		for (i = 0;  i < slen;  i++) {
+			if (timeString[i] == ':') {
+				break;
+			}
+			buf[i] = timeString[i];
+		}
+		buf[i] = '\0';
+		hours = 0;
+		minutes = atoi(buf);
+		seconds = atof(timeString + i + 1);
+	} else if (colonCount == 2) {
+		for (i = 0;  i < slen;  i++) {
+			if (timeString[i] == ':') {
+				break;
+			}
+			buf[i] = timeString[i];
+		}
+		buf[i] = '\0';
+		hours = atoi(buf);
+		i++;
+		for (j = 0;  i < slen;  i++, j++) {
+			if (timeString[i] == ':') {
+				break;
+			}
+			buf[j] = timeString[i];
+		}
+		buf[j] = '\0';
+		minutes = atoi(buf);
+		seconds = atof(timeString + i + 1);
+	} else {
+		Com_Printf("Q_ParseClockTime() bad string '%s', needs to be in clock format:   1:38, 15:01, 0:15, etc... \n", timeString);
+		return -1;
+	}
+
+	clockTime = ((double)hours * 60.0 * 60.0 + (double)minutes * 60.0 + seconds) * 1000.0;
+
+	return clockTime;
 }
 
 int QDECL Com_sprintf(char *dest, int size, const char *fmt, ...)

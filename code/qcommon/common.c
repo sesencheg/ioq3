@@ -99,6 +99,12 @@ cvar_t	*com_busyWait;
 cvar_t  *con_autochat;
 #endif
 
+cvar_t *com_autoWriteConfig;
+cvar_t *com_execVerbose;
+cvar_t *com_qlColors;
+cvar_t *com_idleSleep;
+cvar_t *com_brokenDemo;
+
 #if idx64
 	int (*Q_VMftol)(void);
 #elif id386
@@ -2784,7 +2790,8 @@ void Com_Init( char *commandLine ) {
 	s = va("%s %s %s", Q3_VERSION, PLATFORM_STRING, PRODUCT_DATE );
 	com_version = Cvar_Get ("version", s, CVAR_ROM | CVAR_SERVERINFO );
 	com_gamename = Cvar_Get("com_gamename", GAMENAME_FOR_MASTER, CVAR_SERVERINFO | CVAR_INIT);
-	com_protocol = Cvar_Get("com_protocol", va("%i", PROTOCOL_VERSION), CVAR_SERVERINFO | CVAR_INIT);
+	//com_protocol = Cvar_Get("com_protocol", va("%i", PROTOCOL_VERSION), CVAR_SERVERINFO | CVAR_INIT);
+	com_protocol = Cvar_Get ("protocol", va("%i", PROTOCOL_VERSION), CVAR_SERVERINFO | CVAR_INIT);
 #ifdef LEGACY_PROTOCOL
 	com_legacyprotocol = Cvar_Get("com_legacyprotocol", va("%i", PROTOCOL_LEGACY_VERSION), CVAR_INIT);
 
@@ -2795,6 +2802,12 @@ void Com_Init( char *commandLine ) {
 #endif
 		Cvar_Get("protocol", com_protocol->string, CVAR_ROM);
 
+	com_autoWriteConfig = Cvar_Get("com_autoWriteConfig", "2", CVAR_ARCHIVE);
+	com_execVerbose = Cvar_Get("com_execVerbose", "0", CVAR_ARCHIVE);
+	com_qlColors = Cvar_Get("com_qlColors", "1", CVAR_ARCHIVE);
+	com_idleSleep = Cvar_Get("com_idleSleep", "1", CVAR_ARCHIVE);
+	com_brokenDemo = Cvar_Get("com_brokenDemo", "0", CVAR_INIT);  // can only change from command line
+	
 #ifndef DEDICATED
 	con_autochat = Cvar_Get("con_autochat", "1", CVAR_ARCHIVE);
 #endif

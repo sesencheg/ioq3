@@ -122,6 +122,16 @@ cvar_t	*cl_consoleKeys;
 
 cvar_t	*cl_rate;
 
+cvar_t	*cl_useq3gibs;
+cvar_t	*cl_consoleAsChat;
+cvar_t *cl_numberPadInput;
+cvar_t *cl_maxRewindBackups;
+cvar_t *cl_keepDemoFileInMemory;
+cvar_t *cl_demoFileCheckSystem;
+cvar_t *cl_demoFile;
+cvar_t *cl_demoFileBaseName;
+cvar_t *cl_downloadWorkshops;
+
 clientActive_t		cl;
 clientConnection_t	clc;
 clientStatic_t		cls;
@@ -136,6 +146,10 @@ refexport_t	re;
 #ifdef USE_RENDERER_DLOPEN
 static void	*rendererLib = NULL;
 #endif
+
+demoInfo_t di;
+rewindBackups_t *rewindBackups;
+int maxRewindBackups;
 
 ping_t	cl_pinglist[MAX_PINGREQUESTS];
 
@@ -3662,6 +3676,30 @@ void CL_Init( void ) {
 	// Make sure cg_stereoSeparation is zero as that variable is deprecated and should not be used anymore.
 	Cvar_Get ("cg_stereoSeparation", "0", CVAR_ROM);
 
+	cl_useq3gibs = Cvar_Get ("cl_useq3gibs", "0", CVAR_ARCHIVE);
+	cl_consoleAsChat = Cvar_Get("cl_consoleAsChat", "0", CVAR_ARCHIVE);
+	cl_numberPadInput = Cvar_Get("cl_numberPadInput", "0", CVAR_ARCHIVE);
+
+	cl_maxRewindBackups = Cvar_Get("cl_maxRewindBackups", "12", CVAR_ARCHIVE | CVAR_LATCH);
+
+	maxRewindBackups = cl_maxRewindBackups->integer;
+	if (maxRewindBackups <= 0) {
+		maxRewindBackups = MAX_REWIND_BACKUPS;
+	}
+
+	rewindBackups = malloc(sizeof(rewindBackups_t) * maxRewindBackups);
+	if (!rewindBackups) {
+		Com_Printf("ERROR:  CL_Init couldn't allocate %.2f MB for rewind backups\n", (sizeof(rewindBackups_t) * maxRewindBackups) / 1024.0 / 1024.0);
+		exit(1);
+	}
+	Com_Printf("allocated %.2f MB for rewind backups\n", (sizeof(rewindBackups_t) * maxRewindBackups) / 1024.0 / 1024.0);
+
+	cl_keepDemoFileInMemory = Cvar_Get("cl_keepDemoFileInMemory", "1", CVAR_ARCHIVE);
+	cl_demoFileCheckSystem = Cvar_Get("cl_demoFileCheckSystem", "2", CVAR_ARCHIVE);
+	cl_demoFile = Cvar_Get("cl_demoFile", "", CVAR_ROM);
+	cl_demoFileBaseName = Cvar_Get("cl_demoFileBaseName", "", CVAR_ROM);
+	cl_downloadWorkshops = Cvar_Get("cl_downloadWorkshops", "1", CVAR_ARCHIVE);
+	
 	//
 	// register our commands
 	//

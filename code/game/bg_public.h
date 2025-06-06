@@ -51,13 +51,10 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #define CROUCH_VIEWHEIGHT	12
 #define	DEAD_VIEWHEIGHT		-16
 
-//
-// config strings are a general means of communicating variable length strings
-// from the server to all connected clients.
-//
+#define DOMINATION_POINT_DISTANCE 128
 
-// CS_SERVERINFO and CS_SYSTEMINFO are defined in q_shared.h
-#define	CS_MUSIC				2
+#define MAX_CPMA_NTF_MODELS 8
+#define CS_MUSIC				2
 #define	CS_MESSAGE				3		// from the map worldspawn's message field
 #define	CS_MOTD					4		// g_motd string for server message of the day
 #define	CS_WARMUP				5		// server time when the match will be restarted
@@ -67,46 +64,348 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #define CS_VOTE_STRING			9
 #define	CS_VOTE_YES				10
 #define	CS_VOTE_NO				11
+//#define CS_TEAMVOTE_TIME		12  //FIXME don't know
+#define	CS_GAME_VERSION			12
+#define	CS_LEVEL_START_TIME		13		// so the timer only shows the current level
+#define	CS_INTERMISSION			14		// when 1, fraglimit/timelimit has been hit and intermission will start in a second or two
+#define	CS_ITEMS				15		// string of 0's and 1's that tell which items are present
 
-#define CS_TEAMVOTE_TIME		12
-#define CS_TEAMVOTE_STRING		14
-#define	CS_TEAMVOTE_YES			16
-#define	CS_TEAMVOTE_NO			18
 
-#define	CS_GAME_VERSION			20
-#define	CS_LEVEL_START_TIME		21		// so the timer only shows the current level
-#define	CS_INTERMISSION			22		// when 1, fraglimit/timelimit has been hit and intermission will start in a second or two
-#define CS_FLAGSTATUS			23		// string indicating flag status in CTF
-#define CS_SHADERSTATE			24
-#define CS_BOTINFO				25
+#define CS_MODELS 				17  // was 32.  Same shit as CS_SOUNDS where it is being indexed from 1 so 17 is empty and first model is 18
 
-#define	CS_ITEMS				27		// string of 0's and 1's that tell which items are present
 
-#define	CS_MODELS				32
-#define	CS_SOUNDS				(CS_MODELS+MAX_MODELS)
-#define	CS_PLAYERS				(CS_SOUNDS+MAX_SOUNDS)
-#define CS_LOCATIONS			(CS_PLAYERS+MAX_CLIENTS)
-#define CS_PARTICLES			(CS_LOCATIONS+MAX_LOCATIONS) 
+#define	CS_SOUNDS				274  //(CS_MODELS+MAX_MODELS).  Might be 273 (17 + 256), but using consistant indexing from 0 in source code to fix sound bugs
+#define	CS_PLAYERS				529  //(CS_SOUNDS+MAX_SOUNDS)
+#define CS_LOCATIONS			593  //(CS_PLAYERS+MAX_CLIENTS)
 
-#define CS_MAX					(CS_PARTICLES+MAX_LOCATIONS)
+#define CS_PARTICLES			(CS_LOCATIONS+MAX_LOCATIONS)  // 657
 
+// not true anymore since quake live adds new config strings after this
+//#define CS_MAX					(CS_PARTICLES+MAX_LOCATIONS)  // 721
+
+#define CS_FLAGSTATUS			658  //23		// string indicating flag status in CTF
+
+#define CS_FIRSTPLACE            659
+#define CS_SECONDPLACE           660
+
+#define CS_ROUND_STATUS			661  // also used for freezetag
+#define CS_ROUND_TIME				662  // when -1 round is over, also used for freezetag
+
+#define CS_RED_PLAYERS_LEFT		663
+#define CS_BLUE_PLAYERS_LEFT	664
+
+#define CS_SHADERSTATE			665  // was 24, 2008-69939-ZeRo4 - Clock (qzdm6)qcon08.rar
+
+// 666
+// 667  ctf, ca, tdm, duel, ffa
+// 668  ctf, ca, tdm, duel, ffa
+#define CS_TIMEOUT_BEGIN_TIME	669
+#define CS_TIMEOUT_END_TIME		670
+#define CS_RED_TEAM_TIMEOUTS_LEFT	671
+#define CS_BLUE_TEAM_TIMEOUTS_LEFT	672
+// 673
+// 674 ca, ffa, ft
+// 675 ca, ffa
+// 676 ca, ffa
+// 677 ffa
+// 678 freezetag
+
+#define CS_MAP_CREATOR 679
+#define CS_ORIGINAL_MAP_CREATOR 680
+
+// 681
+//      ffa:  15000
+
+// 682
+//    ffa:  \pmove_AirAccel\1.0\pmove_AirSteps\1\pmove_JumpTimeDeltaMin\100.0\pmove_JumpVelocity\275\pmove_JumpVelocityScaleAdd\0.4\pmove_JumpVelocityTimeThreshold\500.0\pmove_RampJump\0\pmove_RampJumpScale\1.0\pmove_StepHeight\22.0\pmove_StepJump\1\pmove_WalkAccel\10.0\pmove_WalkFriction\6.0\pmove_WeaponDropTime\200\pmove_WeaponRaiseTime\200
+
+#define CS_PMOVE_SETTINGS 682
+
+// 683
+//   ffa:  \weapon_reload_bfg\300\weapon_reload_cg\50\weapon_reload_gauntlet\400\weapon_reload_gl\800\weapon_reload_hook\400\weapon_reload_lg\50\weapon_reload_mg\100\weapon_reload_ng\1000\weapon_reload_pg\100\weapon_reload_prox\800\weapon_reload_rg\1500\weapon_reload_rl\800\weapon_reload_sg\1000
+
+//////////////////////////////////////////////////////
+
+#define CS_WEAPON_SETTINGS 683  // 2012-01-14 ql -- now armor tiered settings
+
+
+// 684
+//  ffa:  \g_allowCustomHeadmodels\0\g_playerheadScale\1.0\g_playerheadScaleOffset\1.0\g_playerModelScale\1.1
+
+#define CS_CUSTOM_PLAYER_MODELS 684  // 2012-01-14 ql -- now weapon settings
+
+// 685 in ffa  goes from -1 to 0 when ffa match starts  -- client num in first place?
+#define CS_FIRST_PLACE_CLIENT_NUM 685  // 2012-01-14 ql -- now custom player models
+
+// 686 in ffa  goes from -1 to 1 when ffa match starts -- client num in second place?
+#define CS_SECOND_PLACE_CLIENT_NUM 686
+
+// 687 in ffa  first place player's score?
+#define CS_FIRST_PLACE_SCORE 687
+
+// 688 in ffa  second place player's score?  2012-01-11 now first place score :(
+#define CS_SECOND_PLACE_SCORE 688
+
+// 689  2012-01-11  duel  now second place score?? :(
+
+// 690 in ffa, ctf, ca, tdm, ft  award? stats
+#define CS_MOST_DAMAGE_DEALT 690
+
+// 691 in ffa, ctf, ca, tdm, ft  award? stats
+#define CS_MOST_ACCURATE 691  // 2012-01-07 now most damage :(
+
+// 692 in ffa, ctf,     tdm, ft  award? stats
+#define CS_BEST_ITEM_CONTROL 692  // 2012-01-07 now most accurate :(
+
+#define CS_RED_TEAM_CLAN_NAME 693
+#define CS_BLUE_TEAM_CLAN_NAME 694
+#define CS_RED_TEAM_CLAN_TAG 695  // unless it's "Red Team" :.
+#define CS_BLUE_TEAM_CLAN_TAG 696  // unless it's "Blue Team"
+
+// 697 2012-01-07  new -- best control  :(
+
+// 2012-01-07  fucked up new config strings for awards -- they stuck in 683 armor tiered
+
+/////////////////////////////////////////////////
+
+#define CS_ARMOR_TIERED 683
+
+#define CS_WEAPON_SETTINGS2 684
+#define CS_CUSTOM_PLAYER_MODELS2 685
+#define CS_FIRST_PLACE_CLIENT_NUM2 686
+#define CS_SECOND_PLACE_CLIENT_NUM2 687
+#define CS_FIRST_PLACE_SCORE2 688
+#define CS_SECOND_PLACE_SCORE2 689
+
+#define CS_MOST_DAMAGE_DEALT2 691
+#define CS_MOST_ACCURATE2 692
+#define CS_BEST_ITEM_CONTROL2 697
+
+// 698 ?
+
+
+//// fu ql
+
+#define CS_MVP_OFFENSE 699
+#define CS_MVP_DEFENSE 700
+#define CS_MVP 701
+#define CS_DOMINATION_RED_POINTS 702
+#define CS_DOMINATION_BLUE_POINTS 703
+
+#define CS_ROUND_WINNERS 705
+#define CS_CUSTOM_SERVER_SETTINGS 706
+#define CS_MAP_VOTE_INFO 707
+#define CS_MAP_VOTE_COUNT 708
+#define CS_DISABLE_MAP_VOTE 709
+
+#define CS_READY_UP_TIME 710  // ready up time if one player readied
+
+// 711
+
+// 712  infected:  500.000000
+
+#define CS_NUMBER_OF_RACE_CHECKPOINTS 713
+
+
+// unknown ones which haven't been seen in quake live, but kept for compiling
+
+#define	CS_TEAMVOTE_YES			MAX_CONFIGSTRINGS - 41  //16
+#define	CS_TEAMVOTE_NO			MAX_CONFIGSTRINGS - 39  //18
+#define CS_TEAMVOTE_TIME		MAX_CONFIGSTRINGS - 37  //19  //FIXME just anywere to let it compile
+#define CS_TEAMVOTE_STRING		MAX_CONFIGSTRINGS - 35  //22  // was 14
+#define CS_BOTINFO				MAX_CONFIGSTRINGS - 33  //25
+
+// protocol 91 (everything the same up to CG_SHADERSTATE:665
+
+#define CS91_NEXTMAP  666
+#define CS91_PRACTICE 667
+#define CS91_FREECAM 668
+#define CS91_PAUSE_START_TIME 669  // non-zero means paused
+#define CS91_PAUSE_END_TIME  670 // 0 is paused and non-zero is timeout
+#define CS91_TIMEOUTS_RED 671
+#define CS91_TIMEOUTS_BLUE 672
+#define CS91_MODEL_OVERRIDE 673
+#define CS91_PLAYER_CYLINDERS 674
+#define CS91_DEBUGFLAGS 675
+#define CS91_ENABLEBREATH 676
+#define CS91_DMGTHROUGHDEPTH 677
+#define CS91_AUTHOR 678
+#define CS91_AUTHOR2 679
+#define CS91_ADVERT_DELAY 680
+#define CS91_PMOVEINFO 681
+#define CS91_ARMORINFO 682
+#define CS91_WEAPONINFO 683
+#define CS91_PLAYERINFO 684
+#define CS91_SCORE1STPLAYER 685  // score of duel player on left
+#define CS91_SCORE2NDPLAYER 686  // score of duel player on right
+#define CS91_CLIENTNUM1STPLAYER 687  // left
+#define CS91_CLIENTNUM2NDPLAYER 688
+#define CS91_NAME1STPLAYER 689
+#define CS91_NAME2NDPLAYER 690
+#define CS91_ATMOSEFFECT 691
+#define CS91_MOST_DAMAGEDEALT_PLYR 692
+#define CS91_MOST_ACCURATE_PLYR 693
+#define CS91_REDTEAMBASE 694
+#define CS91_BLUETEAMBASE 695
+#define CS91_BEST_ITEMCONTROL_PLYR 696
+#define CS91_MOST_VALUABLE_OFFENSIVE_PLYR 697
+#define CS91_MOST_VALUABLE_DEFENSIVE_PLYR 698
+#define CS91_MOST_VALUABLE_PLYR 699
+#define CS91_GENERIC_COUNT_RED 700
+#define CS91_GENERIC_COUNT_BLUE 701
+#define CS91_AD_SCORES 702
+#define CS91_ROUND_WINNER 703
+#define CS91_CUSTOM_SETTINGS 704
+#define CS91_ROTATIONMAPS 705
+#define CS91_ROTATIONVOTES 706
+#define CS91_DISABLE_VOTE_UI 707
+#define CS91_ALLREADY_TIME 708
+#define CS91_INFECTED_SURVIVOR_MINSPEED 709
+#define CS91_RACE_POINTS 710
+#define CS91_DISABLE_LOADOUT 711
+#define CS91_MATCH_GUID 712
+#define CS91_STARTING_WEAPONS 713
+#define CS91_STEAM_ID 714
+#define CS91_STEAM_WORKSHOP_IDS 715
+
+// quake live server custom settings
+/*
+#define SERVER_SETTING_MODIFIED_GAUNT 0x1
+#define SERVER_SETTING_MODIFIED_MG 0x2
+4 sg
+8 gl
+10 rl
+20 lg
+40 rg
+80 pg
+100 bfg
+200 grapple
+400 nailgun
+800 prox
+1000 cg
+*/
+
+// 0x0000 2000 air control
+// 0x0000 4000 ramp jumping
+// 0x0000 8000 modified physics
+// 0x0001 0000 modified weapon switch
+// 0x0002 0000 instagib
+// 0x0004 0000 quad hog
+// 0x0008 0000 regen health
+// 0x0010 0000 dropped damage health
+// 0x0020 0000 vampiric damage
+// 0x0040 0000 modified item spawning
+// 0x0080 0000 headshots enabled
+// 0x0100 0000 rail jumping
+
+#define SERVER_SETTING_INFECTED 0x04000000
+
+
+// doesn't work with quakelive
+#if 0
 #if (CS_MAX) > MAX_CONFIGSTRINGS
 #error overflow: (CS_MAX) > MAX_CONFIGSTRINGS
 #endif
+#endif
+
+/////////////////////////////
+// q3 config strings
+// CS_SERVERINFO and CS_SYSTEMINFO are defined in q_shared.h
+#define CSQ3_SERVERINFO   0  //CS_SERVERINFO
+#define CSQ3_SYSTEMINFO   1  //CS_SYSTEMINFO
+#define	CSQ3_MUSIC				2
+#define	CSQ3_MESSAGE				3		// from the map worldspawn's message field
+#define	CSQ3_MOTD					4		// g_motd string for server message of the day
+#define	CSQ3_WARMUP				5		// server time when the match will be restarted
+#define	CSQ3_SCORES1				6
+#define	CSQ3_SCORES2				7
+#define CSQ3_VOTE_TIME			8
+#define CSQ3_VOTE_STRING			9
+#define	CSQ3_VOTE_YES				10
+#define	CSQ3_VOTE_NO				11
+
+#define CSQ3_TEAMVOTE_TIME		12
+#define CSQ3_TEAMVOTE_STRING		14
+#define	CSQ3_TEAMVOTE_YES			16
+#define	CSQ3_TEAMVOTE_NO			18
+
+#define	CSQ3_GAME_VERSION			20
+#define	CSQ3_LEVEL_START_TIME		21		// so the timer only shows the current level
+#define	CSQ3_INTERMISSION			22		// when 1, fraglimit/timelimit has been hit and intermission will start in a second or two
+#define CSQ3_FLAGSTATUS			23		// string indicating flag status in CTF
+#define CSQ3_SHADERSTATE			24
+#define CSQ3_BOTINFO				25
+
+#define	CSQ3_ITEMS				27		// string of 0's and 1's that tell which items are present
+
+#define	CSQ3_MODELS				32
+#define	CSQ3_SOUNDS				(CSQ3_MODELS+MAX_MODELS)
+#define	CSQ3_PLAYERS				(CSQ3_SOUNDS+MAX_SOUNDS)
+#define CSQ3_LOCATIONS			(CSQ3_PLAYERS+MAX_CLIENTS)
+#define CSQ3_PARTICLES			(CSQ3_LOCATIONS+MAX_LOCATIONS)
+
+#define CSQ3_MAX					(CSQ3_PARTICLES+MAX_LOCATIONS)
+
+#if (CSQ3_MAX) > MAX_CONFIGSTRINGS
+#error overflow: (CSQ3_MAX) > MAX_CONFIGSTRINGS
+#endif
+
+// from Uber Demo Tools:  dm3 had MAX_CLIENTS set as 128!
+#define CSQ3DM3_LOCATIONS (CSQ3_LOCATIONS + 64)
+#define CSQ3DM3_PARTICLES (CSQ3DM3_LOCATIONS+MAX_LOCATIONS)
+#define CSQ3DM3_MAX (CSQ3DM3_PARTICLES+MAX_LOCATIONS)
+
+// cpma
+#define CSCPMA_GAMESTATE 672
+
+#define CSCPMA_SCORES 710
+
+#define CSCPMA_MESSAGE 718  // map message
+
+#define CSCPMA_RATE 726  // not sure
+// 727  max packet dup?  seen:  4
+
+// 2021-08-25 8 max slots for ntf classes.  Tested with cpma-1.52 and over
+// 20 files in classes/
+#define CSCPMA_NTF_CLASS_0 728
+#define CSCPMA_NTF_CLASS_1 729
+#define CSCPMA_NTF_CLASS_2 730
+#define CSCPMA_NTF_CLASS_3 731
+#define CSCPMA_NTF_CLASS_4 732
+#define CSCPMA_NTF_CLASS_5 733
+#define CSCPMA_NTF_CLASS_6 734
+#define CSCPMA_NTF_CLASS_7 735
+
+#define CSCPMA_SNAPS 746
+#define CSCPMA_MAX_PACKETS 747
 
 typedef enum {
 	GT_FFA,				// free for all
 	GT_TOURNAMENT,		// one on one tournament
-	GT_SINGLE_PLAYER,	// single player ffa
+	GT_RACE,  // ql replaced single player with race
 
 	//-- team games go after this --
 
 	GT_TEAM,			// team deathmatch
-	GT_CTF,				// capture the flag
+	GT_CA,				// clan arena
+
+	GT_CTF,				// capture the flag  5
 	GT_1FCTF,
 	GT_OBELISK,
 	GT_HARVESTER,
-	GT_MAX_GAME_TYPE
+	GT_FREEZETAG,
+
+	GT_DOMINATION,  // 10
+	GT_CTFS,
+	GT_RED_ROVER,
+
+	// cpma
+	GT_NTF,  // not team fortress
+	GT_2V2,
+
+	GT_HM,  // hoony mode  15
+	GT_SINGLE_PLAYER,   // 16
+	GT_MAX_GAME_TYPE,
 } gametype_t;
 
 typedef enum { GENDER_MALE, GENDER_FEMALE, GENDER_NEUTER } gender_t;

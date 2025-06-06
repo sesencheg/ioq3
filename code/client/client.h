@@ -38,6 +38,8 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #include <opus.h>
 #endif
 
+#define MAX_DEMO_FILES 64
+
 // file full of random crap that gets used to create cl_guid
 #define QKEY_FILE "qkey"
 #define QKEY_SIZE 2048
@@ -231,7 +233,9 @@ typedef struct {
 	int			timeDemoMinDuration;	// minimum frame duration
 	int			timeDemoMaxDuration;	// maximum frame duration
 	unsigned char	timeDemoDurations[ MAX_TIMEDEMO_DURATIONS ];	// log of frame durations
-
+	int	cgameTime;
+	int realProtocol;
+	
 	float		aviVideoFrameRemainder;
 	float		aviSoundFrameRemainder;
 
@@ -358,6 +362,132 @@ extern	clientStatic_t		cls;
 extern	char		cl_oldGame[MAX_QPATH];
 extern	qboolean	cl_oldGameSet;
 
+typedef struct {
+	qboolean valid;
+	int num;
+	qhandle_t f;
+	int serverTime;
+	clSnapshot_t snap;
+	int serverMessageSequence;
+} demoFile_t;
+
+#define MAX_PLAYER_INFO 256
+
+typedef struct {
+	char modelName[MAX_QPATH];
+} playerInfo_t;
+
+#define MAX_TEAM_SWITCHES 512
+
+typedef struct {
+	int clientNum;
+	int oldTeam;
+	int newTeam;
+	int serverTime;
+} teamSwitch_t;
+
+typedef struct {
+	int numSnaps;
+	int lastServerTime;
+	int firstServerTime;
+	int gameStartTime;
+	int gameEndTime;
+	int serverFrameTime;
+
+	double wantedTime;
+	int snapCount;
+
+	int demoPos;
+	int snapsInDemo;
+	qboolean gotFirstSnap;
+	qboolean skipSnap;
+
+	qboolean endOfDemo;
+	qboolean testParse;
+
+	// is it protocol 43 - 48
+	qboolean checkedForOlderUncompressedDemo;
+	qboolean olderUncompressedDemo;
+	int olderUncompressedDemoProtocol;
+
+	demoObit_t obit[MAX_DEMO_OBITS];
+	int obitNum;
+	//qboolean clientAlive[MAX_CLIENTS];
+	qboolean offlineDemo;
+	qboolean hasWarmup;
+
+	int oldLegsAnim[MAX_GENTITIES];
+	int oldTorsoAnim[MAX_GENTITIES];
+	int oldLegsAnimTime[MAX_GENTITIES];
+	int oldTorsoAnimTime[MAX_GENTITIES];
+
+	int oldPsLegsAnim;
+	int oldPsTorsoAnim;
+	int oldPsLegsAnimTime;
+	int oldPsTorsoAnimTime;
+	qboolean seeking;
+
+	int firstNonDeltaMessageNumWritten;
+
+	itemPickup_t itemPickups[MAX_ITEM_PICKUPS];
+	int numItemPickups;
+
+	int entityPreviousEvent[MAX_GENTITIES];
+	//qboolean entityInSnap[MAX_GENTITIES];
+	qboolean entityInOldSnap[MAX_GENTITIES];
+	entityState_t *oldEs[MAX_GENTITIES];
+	int entitySnapShotTime[MAX_GENTITIES];
+	int protocol;
+	qboolean cpma;
+	int cpmaLastTs;
+	int cpmaLastTd;
+	int cpmaLastTe;
+
+	timeOut_t timeOuts[MAX_TIMEOUTS];
+	int numTimeouts;
+
+	demoFile_t demoFiles[MAX_DEMO_FILES];
+	int numDemoFiles;
+
+	int roundStarts[MAX_DEMO_ROUND_STARTS];
+	int numRoundStarts;
+
+	int pov;
+
+	playerInfo_t playerInfo[MAX_PLAYER_INFO];
+	int numPlayerInfo;
+
+	// keeps track of current team
+	int clientTeam[MAX_CLIENTS];
+
+	teamSwitch_t teamSwitches[MAX_TEAM_SWITCHES];
+	int numTeamSwitches;
+
+	int gametype;
+
+	qboolean streaming;
+	qboolean waitingForStream;
+	int streamWaitTime;
+} demoInfo_t;
+
+extern demoInfo_t di;
+
+typedef struct {
+    qboolean valid;
+    int seekPoint;
+	int demoSeekPoints[MAX_DEMO_FILES];
+    clientActive_t cl;
+    clientConnection_t clc;
+    clientStatic_t cls;
+    int numSnaps;
+} rewindBackups_t;
+
+//FIXME can make dynamic to improve seek performance
+#define MAX_REWIND_BACKUPS 12   // 1000 ~ 175 megabytes, sizeof(rewindBackups_t) is 1.753348 mb
+
+extern rewindBackups_t *rewindBackups;
+extern int maxRewindBackups;
+
 //=============================================================================
 
 extern	vm_t			*cgvm;	// interface to cgame dll or vm
@@ -451,6 +581,18 @@ extern	cvar_t	*cl_voip;
 #define VOIP_MAX_PACKET_FRAMES		3
 #define VOIP_MAX_PACKET_SAMPLES		( VOIP_MAX_FRAME_SAMPLES * VOIP_MAX_PACKET_FRAMES )
 #endif
+
+extern cvar_t	*cl_useq3gibs;
+extern cvar_t	*cl_consoleAsChat;
+extern cvar_t *cl_numberPadInput;
+extern cvar_t *cl_maxRewindBackups;
+extern cvar_t *cl_keepDemoFileInMemory;
+extern cvar_t *cl_demoFileCheckSystem;
+extern cvar_t *cl_demoFile;
+extern cvar_t *cl_demoFileBaseName;
+extern cvar_t *cl_downloadWorkshops;
+
+extern double Overf;
 
 //=================================================
 

@@ -26,6 +26,12 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 // q_shared.h -- included first by ALL program modules.
 // A user mod should never modify this file
 
+#define PROTOCOL_Q3DEMO 43
+#define PROTOCOL_Q3ORIG 46
+#define PROTOCOL_Q3 68
+#define PROTOCOL_QL 91  // latest ql protocol
+#define SERVER_PROTOCOL 91  // devmap
+
 #ifdef STANDALONE
   #define PRODUCT_NAME				"iofoo3"
   #define BASEGAME					"foobar"
@@ -244,6 +250,7 @@ typedef int		clipHandle_t;
 #define	YAW					1		// left / right
 #define	ROLL				2		// fall over
 
+#define MAX_PRINT_MSG (1024 * 16)
 // the game guarantees that no string from the network will ever
 // exceed MAX_STRING_CHARS
 #define	MAX_STRING_CHARS	1024	// max length of a string passed to Cmd_TokenizeString
@@ -816,7 +823,9 @@ int Q_isprint( int c );
 int Q_islower( int c );
 int Q_isupper( int c );
 int Q_isalpha( int c );
+qboolean Q_isdigit (char c);
 qboolean Q_isanumber( const char *s );
+qboolean Q_isAnInteger (const char *s);
 qboolean Q_isintegral( float f );
 
 // portable case insensitive compare
@@ -837,6 +846,7 @@ int Q_PrintStrlen( const char *string );
 char *Q_CleanStr( char *string );
 // Count the number of char tocount encountered in string
 int Q_CountChar(const char *string, char tocount);
+double Q_ParseClockTime (const char *timeString);
 
 //=============================================
 

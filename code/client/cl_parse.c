@@ -44,6 +44,29 @@ void SHOWNET( msg_t *msg, char *s) {
 	}
 }
 
+static void Parse_Error (int code, const char *fmt, ...)
+{
+	va_list argptr;
+	char errorMsg[MAX_PRINT_MSG];
+
+	va_start(argptr, fmt);
+	Q_vsnprintf (errorMsg, sizeof(errorMsg), fmt, argptr);
+	va_end(argptr);
+
+	if (di.testParse) {
+		Com_Printf(S_COLOR_RED "demo error: '%s'\n", errorMsg);
+		if (Cvar_VariableIntegerValue("debug_demo_strict")) {
+			Com_Error(code, "%s", errorMsg);
+		}
+	} else {
+		if (com_brokenDemo->integer) {
+			Com_Printf(S_COLOR_RED "demo error: '%s'\n", errorMsg);
+		} else {
+			Com_Error(code, "%s", errorMsg);
+		}
+	}
+}
+
 
 /*
 =========================================================================
@@ -468,7 +491,13 @@ void CL_ParseGamestate( msg_t *msg ) {
 	char			*s;
 	char oldGame[MAX_QPATH];
 
-	Con_Close();
+	if (!di.testParse) {
+		Con_Close();
+	} else {
+		//Con_Close();
+	}
+
+	//Com_Printf("parse gamestate...\n");
 
 	clc.connectPacketCount = 0;
 
@@ -483,23 +512,137 @@ void CL_ParseGamestate( msg_t *msg ) {
 	while ( 1 ) {
 		cmd = MSG_ReadByte( msg );
 
+		//Com_Printf("ggggg  %d  (%d %d)\n", cmd, msg->readcount, msg->bit);
+
+		if (di.olderUncompressedDemo  &&  di.olderUncompressedDemoProtocol <= 48  &&  cmd == svc_bad) {
+			break;
+		}
+
 		if ( cmd == svc_EOF ) {
 			break;
 		}
-		
+
 		if ( cmd == svc_configstring ) {
 			int		len;
 
 			i = MSG_ReadShort( msg );
+
+			//FIXME parse protocol dynamically here
+
+			//Com_Printf("config string %d\n", i);
+
 			if ( i < 0 || i >= MAX_CONFIGSTRINGS ) {
-				Com_Error( ERR_DROP, "configstring > MAX_CONFIGSTRINGS" );
+				Parse_Error(ERR_DROP, "CL_ParseGamestate configstring(%d) > MAX_CONFIGSTRINGS(%d)", i, MAX_CONFIGSTRINGS);
+				return;
 			}
 			s = MSG_ReadBigString( msg );
 			len = strlen( s );
 
 			if ( len + 1 + cl.gameState.dataCount > MAX_GAMESTATE_CHARS ) {
-				Com_Error( ERR_DROP, "MAX_GAMESTATE_CHARS exceeded" );
+				Parse_Error( ERR_DROP, "CL_ParseGamestate MAX_GAMESTATE_CHARS(%d) exceeded", MAX_GAMESTATE_CHARS);
+				return;
 			}
+
+			//Com_Printf("config string %d: '%s'\n", i, s);
+
+			// server info, get protocol here
+			if (i == 0) {
+				const char *value;
+				int p;
+
+				value = Info_ValueForKey(s, "protocol");
+				p = atoi(value);
+
+				Com_Printf("^5real gamestate protocol %d\n", p);
+				Cvar_Set("real_protocol", value);
+				clc.realProtocol = p;
+
+				if (p >= 43  &&  p <= 48) {
+					Cvar_Set("protocol", va("%d", p));
+				} else if (p >= 66  &&  p <= 71) {
+					Cvar_Set("protocol", va("%d", PROTOCOL_Q3));
+				} else if (p == 73) {  //FIXME define
+					Cvar_Set("protocol", "73");
+				} else if (p == 90) {
+					Cvar_Set("protocol", "90");
+				} else if (p == PROTOCOL_QL) {
+					Cvar_Set("protocol", va("%d", PROTOCOL_QL));
+				} else if (strlen(value) == 0) {
+					//FIXME fallback to file extension instead,
+					// 2022-03-31 q3 demo with no protocol
+					// \configstrings 0
+				    // 0: \dmflags\0\fraglimit\7\g_gametype\1\mapname\ztn3tourney1\sv_allowDownload\1\sv_dlURL\http://n2.q3msk.ru/files/maps\sv_floodProtect\1\sv_hostname\   ^3MOSCOW 1v1#2   \sv_maxclients\15\sv_minRate\50000\timelimit\7\version\Q3 1.32e linux-x86_64 Jan 30 2022\Players_Active\2 3 \Score_Time\Waiting for Players\capturelimit\0\g_motd\http://q3msk.ru - MOSCOW DUEL #2\g_needpass\0\g_smoothClients\1\gamename\osp\gameversion\OSP v1.03a\server_promode\0\.Admin\RateX7\.E-mail\unknown\.Location\Moscow, RU
+
+					if (di.numDemoFiles > 0) {
+						const char *ext;
+
+						Com_Printf("^5protocol not set, setting based on file extension and then checking com_protocol\n");
+						//ext = COM_GetExtension(DemoNames[0]);
+						ext = COM_GetExtension(cl_demoFile->string);
+
+						if (!Q_stricmpn(ext, "dm3", 3)) {
+							Com_Printf("Q3Demo demo extension found\n");
+							//FIXME define
+							//FIXME 2024-09-04 wont really work for 44 - 47
+							Cvar_Set("protocol", va("%d", 43));
+						} else if (!Q_stricmpn(ext, "dm_46", 5)  ||
+								   !Q_stricmpn(ext, "dm_47", 5)  ||
+								   !Q_stricmpn(ext, "dm_48", 5)) {
+							Com_Printf("Q3 demo extension found\n");
+							//FIXME define
+							Cvar_Set("protocol", va("%d", 48));
+						} else if (!Q_stricmpn(ext, "dm_66", 5)  ||
+								   !Q_stricmpn(ext, "dm_67", 5)  ||
+								   !Q_stricmpn(ext, "dm_68", 5)  ||
+								   !Q_stricmpn(ext, "dm_69", 5)  ||
+								   !Q_stricmpn(ext, "dm_70", 5)  ||
+								   !Q_stricmpn(ext, "dm_71", 5)) {
+							Com_Printf("Q3 demo extension found\n");
+							Cvar_Set("protocol", va("%d", PROTOCOL_Q3));
+						} else {
+							Com_Printf("not Q3 demo extension: '%s'\n", ext);
+							Cvar_Set("protocol", va("%d", PROTOCOL_QL));
+						}
+					} else {
+						Com_Printf("^5protocol not set, setting to %d and then checking com_protocol\n", PROTOCOL_QL);
+						Cvar_Set("protocol", va("%d", PROTOCOL_QL));
+					}
+				} else {
+					Com_Printf("^3unknown protocol %d, trying dm %d\n", p, PROTOCOL_QL);
+					Cvar_Set("protocol", va("%d", PROTOCOL_QL));
+
+				}
+
+				// sometimes in quake the protocol is found in this key...
+				value = Info_ValueForKey(s, "com_protocol");  // fucking...
+				p = atoi(value);
+				if (p >= 66  &&  p <= 71) {
+					Com_Printf("^5real gamestate using com_protocol %d (%s)\n", PROTOCOL_Q3, value);
+					Cvar_Set("real_protocol", value);
+					clc.realProtocol = p;
+					Cvar_Set("protocol", va("%d", PROTOCOL_Q3));
+				}
+
+				if (di.testParse) {
+					di.protocol = atoi(com_protocol->string);
+					Com_Printf("^5demo parse protocol %d\n", di.protocol);
+					value = Info_ValueForKey(s, "g_gametype");
+					di.gametype = atoi(value);
+				}
+
+			} else if (i == CS91_STEAM_WORKSHOP_IDS) {  //  &&  !di.testParse) {
+				int protocol;
+
+				protocol = clc.realProtocol;
+				if (protocol >= 91) {
+					if (!di.testParse) {
+						Com_Printf("^2workshop ids:  '%s'\n", s);
+					}
+					Cvar_Set("com_workshopids", s);
+				}
+			}
+
+			//Com_Printf("cs %d '%s'\n", i, s);
 
 			// append it to the gameState string buffer
 			cl.gameState.stringOffsets[ i ] = cl.gameState.dataCount;
@@ -507,20 +650,30 @@ void CL_ParseGamestate( msg_t *msg ) {
 			cl.gameState.dataCount += len + 1;
 		} else if ( cmd == svc_baseline ) {
 			newnum = MSG_ReadBits( msg, GENTITYNUM_BITS );
+			//newnum = MSG_ReadBits(msg, 9);
+
+			//Com_Printf("  baseline %d\n", newnum);
 			if ( newnum < 0 || newnum >= MAX_GENTITIES ) {
-				Com_Error( ERR_DROP, "Baseline number out of range: %i", newnum );
+				Parse_Error( ERR_DROP, "CL_ParseGamesate Baseline number out of range: %i", newnum );
+				return;
 			}
 			Com_Memset (&nullstate, 0, sizeof(nullstate));
 			es = &cl.entityBaselines[ newnum ];
 			MSG_ReadDeltaEntity( msg, &nullstate, es, newnum );
 		} else {
-			Com_Error( ERR_DROP, "CL_ParseGamestate: bad command byte" );
+			Parse_Error(ERR_DROP, "CL_ParseGamestate: bad command byte %d", cmd);
+			return;
 		}
 	}
 
-	clc.clientNum = MSG_ReadLong(msg);
-	// read the checksum feed
-	clc.checksumFeed = MSG_ReadLong( msg );
+	//FIXME protocol >= 66
+	if (di.olderUncompressedDemo  &&  di.olderUncompressedDemoProtocol <= 48) {
+		// pass, no clientNum or checksumFeed
+	} else {
+		clc.clientNum = MSG_ReadLong(msg);
+		// read the checksum feed
+		clc.checksumFeed = MSG_ReadLong( msg );
+	}
 
 	// save old gamedir
 	Cvar_VariableStringBuffer("fs_game", oldGame, sizeof(oldGame));
@@ -528,28 +681,93 @@ void CL_ParseGamestate( msg_t *msg ) {
 	// parse useful values out of CS_SERVERINFO
 	CL_ParseServerInfo();
 
-	// parse serverId and other cvars
-	CL_SystemInfoChanged();
+	if (di.testParse) {
+		const char *info;
 
-	// stop recording now so the demo won't have an unnecessary level load at the end.
-	if(cl_autoRecordDemo->integer && clc.demorecording)
-		CL_StopRecord_f();
-	
-	// reinitialize the filesystem if the game directory has changed
-	if(!cl_oldGameSet && (Cvar_Flags("fs_game") & CVAR_MODIFIED))
-	{
-		cl_oldGameSet = qtrue;
-		Q_strncpyz(cl_oldGame, oldGame, sizeof(cl_oldGame));
+		if (com_protocol->integer == PROTOCOL_Q3) {
+			info = cl.gameState.stringData + cl.gameState.stringOffsets[CSQ3_GAME_VERSION];
+			if (!Q_stricmp("cpma-1", info)) {
+				Com_Printf("^5cpma\n");
+				di.cpma = qtrue;
+			} else {
+				di.cpma = qfalse;
+			}
+		} else {
+			di.cpma = qfalse;
+		}
+
+		if (com_protocol->integer == PROTOCOL_QL  ||  com_protocol->integer == 73  ||  com_protocol->integer == 90) {
+			info = cl.gameState.stringData + cl.gameState.stringOffsets[CS_WARMUP];
+			di.hasWarmup = atoi(Info_ValueForKey(info, "time"));
+		} else {
+			info = cl.gameState.stringData + cl.gameState.stringOffsets[CSQ3_WARMUP];
+			di.hasWarmup = atoi(info);
+		}
+		if (!di.hasWarmup) {
+			if (com_protocol->integer == PROTOCOL_Q3) {
+				if (!di.cpma) {
+					di.gameStartTime = atoi(cl.gameState.stringData + cl.gameState.stringOffsets[CSQ3_LEVEL_START_TIME]);
+				}
+			} else {
+				di.gameStartTime = atoi(cl.gameState.stringData + cl.gameState.stringOffsets[CS_LEVEL_START_TIME]);
+			}
+		}
+
+		// check if demo starts in a timeout
+		if (di.protocol == PROTOCOL_QL  ||  di.protocol == 73  ||  di.protocol == 90) {
+			info = cl.gameState.stringData + cl.gameState.stringOffsets[CS_TIMEOUT_BEGIN_TIME];
+			if (Q_isdigit(info[0])) {
+				// cl.snap.serverTime is 0, but that's ok
+				di.timeOuts[di.numTimeouts].startTime = cl.snap.serverTime;
+				di.timeOuts[di.numTimeouts].serverTime = cl.snap.serverTime;
+				//Com_Printf("^3start inside timeout %d\n", cl.snap.serverTime);
+				// 2017-03-28 not ok if server time is 0, looks like servers
+				// might not be eliminating string correctly and just set it
+				// to 0
+				if (info[0] != '0') {
+					di.numTimeouts++;
+				}
+			}
+		} else if (di.cpma) {
+			int te, td;
+
+			info = cl.gameState.stringData + cl.gameState.stringOffsets[CSCPMA_GAMESTATE];
+			te = atoi(Info_ValueForKey(info, "te"));
+			td = atoi(Info_ValueForKey(info, "td"));
+			if (te) {
+				di.timeOuts[di.numTimeouts].startTime = 0;
+				di.timeOuts[di.numTimeouts].endTime = 0;
+				di.cpmaLastTe = te;
+				di.cpmaLastTd = td;
+				di.numTimeouts++;
+			}
+		}
 	}
 
-	FS_ConditionalRestart(clc.checksumFeed, qfalse);
+	if (!di.testParse) {
+		// parse serverId and other cvars
+		CL_SystemInfoChanged();
 
-	// This used to call CL_StartHunkUsers, but now we enter the download state before loading the
-	// cgame
-	CL_InitDownloads();
+		// stop recording now so the demo won't have an unnecessary level load at the end.
+		if(cl_autoRecordDemo->integer && clc.demorecording)
+			CL_StopRecord_f();
 
-	// make sure the game starts
-	Cvar_Set( "cl_paused", "0" );
+		// reinitialize the filesystem if the game directory has changed
+		if(!cl_oldGameSet && (Cvar_Flags("fs_game") & CVAR_MODIFIED))
+		{
+			cl_oldGameSet = qtrue;
+			Q_strncpyz(cl_oldGame, oldGame, sizeof(cl_oldGame));
+		}
+
+		FS_ConditionalRestart(clc.checksumFeed, qfalse);
+
+		// This used to call CL_StartHunkUsers, but now we enter the download state before loading the
+		// cgame
+		CL_InitDownloads();
+
+		// make sure the game starts
+		Cvar_Set( "cl_paused", "0" );
+	}
 }
 
 
